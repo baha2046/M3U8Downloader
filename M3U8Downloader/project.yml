@@ -1,0 +1,21 @@
+name: M3U8Downloader
+options:
+  bundleIdPrefix: com.ericchan
+targets:
+  M3U8Downloader:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: M3U8Downloader
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ericchan.M3U8Downloader
+        CODE_SIGN_ENTITLEMENTS: M3U8Downloader/Entitlements.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: NO
+        GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_VERSION: "6.0"

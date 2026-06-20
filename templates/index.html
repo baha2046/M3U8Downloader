@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>m3u8 Downloader</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="control-panel" aria-labelledby="form-title">
+      <div class="title-row">
+        <div>
+          <h1 id="form-title">m3u8 Downloader</h1>
+          <p>Queue HLS downloads, keep the CLI behavior, and watch ffmpeg logs in one place.</p>
+        </div>
+        <span class="server-pill">127.0.0.1</span>
+      </div>
+
+      <form id="download-form" class="download-form" enctype="multipart/form-data">
+        <label>
+          <span>m3u8 URL</span>
+          <input id="url" name="url" type="url" placeholder="https://example.com/video.m3u8">
+        </label>
+
+        <label>
+          <span>Local m3u8 file</span>
+          <input id="playlist-file" name="playlist_file" type="file" accept=".m3u8,application/vnd.apple.mpegurl,audio/mpegurl">
+        </label>
+
+        <label>
+          <span>Output file</span>
+          <input id="output" name="output" type="text" placeholder="Defaults to ~/Downloads/playlist-name.mp4">
+        </label>
+
+        <label>
+          <span>Headers</span>
+          <textarea id="headers" name="headers" rows="4" placeholder="Referer: https://example.com&#10;User-Agent: Mozilla/5.0"></textarea>
+        </label>
+
+        <div class="field-grid">
+          <label>
+            <span>Quality</span>
+            <select id="quality" name="quality">
+              <option value="">Best available</option>
+              <option value="720p">Prefer 720p</option>
+              <option value="1080p">Prefer 1080p</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Segment workers</span>
+            <input id="segment-workers" name="segment_workers" type="number" min="1" value="{{ defaults.segment_workers }}">
+          </label>
+
+          <label>
+            <span>Retries</span>
+            <input id="retries" name="retries" type="number" min="1" value="{{ defaults.retries }}">
+          </label>
+
+          <label>
+            <span>Timeout</span>
+            <input id="timeout" name="timeout" type="number" min="1" value="{{ defaults.timeout }}">
+          </label>
+        </div>
+
+        <label class="check-row">
+          <input id="overwrite" name="overwrite" type="checkbox" checked>
+          <span>Overwrite existing output file</span>
+        </label>
+
+        <div class="action-row">
+          <button type="submit">Queue download</button>
+          <p id="form-message" role="status"></p>
+        </div>
+      </form>
+    </section>
+
+    <section class="jobs-panel" aria-labelledby="queue-title">
+      <div class="title-row">
+        <div>
+          <h2 id="queue-title">Download Queue</h2>
+          <p>Jobs run one at a time to keep ffmpeg and network usage predictable.</p>
+        </div>
+        <button id="refresh-button" type="button" class="secondary-button">Refresh</button>
+      </div>
+
+      <div id="jobs" class="jobs-list" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

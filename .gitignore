@@ -1,0 +1,6 @@
+.idea
+.venv
+__pycache__
+*.pyc
+M3U8Downloader.app
+M3U8Downloader/build
