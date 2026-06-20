@@ -1,4 +1,4 @@
-# m3u8 Downloader
+![m3u8 Downloader](docs/github_social_preview.png)
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
@@ -115,6 +115,12 @@ To download a stream:
 
 Completed jobs can be opened in Finder or played directly from the job detail
 screen.
+
+
+### How to get .M3U8 url
+
+In Chrome browser, press F12, click the tab to the Network page, enter "m3u8" in the Filter box. 
+Press F5 to refresh the page, if the video in the web page uses an HLS source, you can capture the video stream address there. 
 
 ### Regenerate The Xcode Project
 
