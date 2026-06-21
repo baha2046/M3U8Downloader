@@ -2,6 +2,9 @@ const form = document.querySelector("#download-form");
 const jobsEl = document.querySelector("#jobs");
 const messageEl = document.querySelector("#form-message");
 const refreshButton = document.querySelector("#refresh-button");
+const curlRequestEl = document.querySelector("#curl-request");
+const curlMessageEl = document.querySelector("#curl-message");
+const extractCurlButton = document.querySelector("#extract-curl-button");
 const eventSources = new Map();
 const jobs = new Map();
 
@@ -18,6 +21,31 @@ function formPayload() {
   const payload = new FormData(form);
   payload.set("overwrite", document.querySelector("#overwrite").checked ? "true" : "false");
   return payload;
+}
+
+async function extractCurlRequest() {
+  const curl = curlRequestEl.value.trim();
+  if (!curl) {
+    curlMessageEl.textContent = "Paste a cURL request first.";
+    return;
+  }
+
+  curlMessageEl.textContent = "Extracting...";
+  const response = await fetch("/api/curl", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ curl }),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    curlMessageEl.textContent = data.error || "Could not parse cURL.";
+    return;
+  }
+
+  document.querySelector("#url").value = data.url || "";
+  document.querySelector("#headers").value = (data.headers || []).join("\n");
+  curlMessageEl.textContent = "URL and headers filled.";
 }
 
 async function enqueueDownload(event) {
@@ -254,4 +282,5 @@ function statusMessage(job) {
 
 form.addEventListener("submit", enqueueDownload);
 refreshButton.addEventListener("click", loadJobs);
+extractCurlButton.addEventListener("click", extractCurlRequest);
 loadJobs();

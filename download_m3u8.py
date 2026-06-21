@@ -6,11 +6,13 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shlex
 import shutil
 import socket
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import unquote, urljoin, urlparse
 from urllib.error import URLError
@@ -26,6 +28,12 @@ QUALITY_HEIGHTS = {
     "720p": 720,
     "1080p": 1080,
 }
+
+
+@dataclass(frozen=True)
+class CurlRequest:
+    url: str
+    headers: list[str]
 
 
 def validate_url(url: str) -> str:
@@ -96,6 +104,219 @@ def headers_to_dict(headers: list[str] | None) -> dict[str, str]:
         if separator:
             header_dict[name.strip()] = value.strip()
     return header_dict
+
+
+def parse_curl_request(curl_request: str) -> CurlRequest:
+    normalized = re.sub(r"\\\r?\n", " ", curl_request.strip())
+    normalized = re.sub(r"\$'([^']*)'", r"'\1'", normalized)
+    try:
+        tokens = shlex.split(normalized)
+    except ValueError as error:
+        raise ValueError(f"Could not parse cURL request: {error}") from error
+
+    if not tokens or os.path.basename(tokens[0]).lower() not in {"curl", "curl.exe"}:
+        raise ValueError("cURL request must start with curl")
+
+    urls: list[str] = []
+    headers: list[str] = []
+    cookie_values: list[str] = []
+    user_agent: str | None = None
+    referer: str | None = None
+    options_with_values = {
+        "--abstract-unix-socket",
+        "--aws-sigv4",
+        "--cacert",
+        "--capath",
+        "--cert",
+        "--cert-status",
+        "--cert-type",
+        "--ciphers",
+        "--connect-timeout",
+        "--connect-to",
+        "--continue-at",
+        "--data",
+        "--data-ascii",
+        "--data-binary",
+        "--data-raw",
+        "--data-urlencode",
+        "--dns-interface",
+        "--dns-ipv4-addr",
+        "--dns-ipv6-addr",
+        "--dns-servers",
+        "--doh-url",
+        "--dump-header",
+        "--egd-file",
+        "--engine",
+        "--form",
+        "--form-string",
+        "--ftp-account",
+        "--ftp-alternative-to-user",
+        "--hostpubmd5",
+        "--hostpubsha256",
+        "--interface",
+        "--key",
+        "--key-type",
+        "--krb",
+        "--limit-rate",
+        "--local-port",
+        "--login-options",
+        "--mail-auth",
+        "--mail-from",
+        "--mail-rcpt",
+        "--max-filesize",
+        "--max-redirs",
+        "--netrc-file",
+        "--oauth2-bearer",
+        "--output",
+        "--pass",
+        "--pinnedpubkey",
+        "--proto",
+        "--proto-default",
+        "--proto-redir",
+        "--proxy",
+        "--proxy-cacert",
+        "--proxy-capath",
+        "--proxy-cert",
+        "--proxy-cert-type",
+        "--proxy-ciphers",
+        "--proxy-header",
+        "--proxy-key",
+        "--proxy-key-type",
+        "--proxy-pass",
+        "--proxy-service-name",
+        "--proxy-tls13-ciphers",
+        "--proxy-tlsauthtype",
+        "--proxy-tlspassword",
+        "--proxy-tlsuser",
+        "--proxy-user",
+        "--pubkey",
+        "--quote",
+        "--range",
+        "--request",
+        "--request-target",
+        "--resolve",
+        "--retry",
+        "--retry-connrefused",
+        "--retry-delay",
+        "--retry-max-time",
+        "--service-name",
+        "--socks4",
+        "--socks4a",
+        "--socks5",
+        "--socks5-basic",
+        "--socks5-gssapi",
+        "--socks5-gssapi-nec",
+        "--socks5-gssapi-service",
+        "--socks5-hostname",
+        "--speed-limit",
+        "--speed-time",
+        "--stderr",
+        "--telnet-option",
+        "--tftp-blksize",
+        "--tls13-ciphers",
+        "--tlspassword",
+        "--tlsuser",
+        "--unix-socket",
+        "--upload-file",
+        "--user",
+    }
+    short_options_with_values = {
+        "-A",
+        "-b",
+        "-c",
+        "-d",
+        "-e",
+        "-F",
+        "-H",
+        "-K",
+        "-m",
+        "-o",
+        "-Q",
+        "-r",
+        "-T",
+        "-u",
+        "-x",
+        "-X",
+        "-Y",
+        "-z",
+    }
+
+    def option_value(index: int, token: str, long_name: str, short_name: str) -> tuple[str | None, int]:
+        if token == long_name or token == short_name:
+            if index + 1 >= len(tokens):
+                raise ValueError(f"{token} requires a value")
+            return tokens[index + 1], index + 2
+        long_prefix = f"{long_name}="
+        if token.startswith(long_prefix):
+            return token[len(long_prefix) :], index + 1
+        if short_name and token.startswith(short_name) and token != short_name:
+            return token[len(short_name) :], index + 1
+        return None, index
+
+    index = 1
+    while index < len(tokens):
+        token = tokens[index]
+
+        value, next_index = option_value(index, token, "--header", "-H")
+        if value is not None:
+            if ":" in value:
+                headers.append(value.strip())
+            index = next_index
+            continue
+
+        value, next_index = option_value(index, token, "--cookie", "-b")
+        if value is not None:
+            stripped = value.strip()
+            if "=" in stripped or ";" in stripped:
+                cookie_values.append(stripped)
+            index = next_index
+            continue
+
+        value, next_index = option_value(index, token, "--url", "")
+        if value is not None:
+            urls.append(value.strip())
+            index = next_index
+            continue
+
+        value, next_index = option_value(index, token, "--user-agent", "-A")
+        if value is not None:
+            user_agent = value.strip()
+            index = next_index
+            continue
+
+        value, next_index = option_value(index, token, "--referer", "-e")
+        if value is not None:
+            referer = value.strip()
+            index = next_index
+            continue
+
+        if token.startswith("http://") or token.startswith("https://"):
+            urls.append(token)
+            index += 1
+            continue
+
+        if token.startswith("--") and "=" not in token and token in options_with_values:
+            index += 2
+            continue
+        if token in short_options_with_values:
+            index += 2
+            continue
+        if any(token.startswith(option) and token != option for option in short_options_with_values):
+            index += 1
+            continue
+        index += 1
+
+    if user_agent and not any(header.partition(":")[0].strip().lower() == "user-agent" for header in headers):
+        headers.append(f"User-Agent: {user_agent}")
+    if referer and not any(header.partition(":")[0].strip().lower() == "referer" for header in headers):
+        headers.append(f"Referer: {referer}")
+    if cookie_values and not any(header.partition(":")[0].strip().lower() == "cookie" for header in headers):
+        headers.append(f"Cookie: {'; '.join(cookie_values)}")
+
+    if not urls:
+        raise ValueError("cURL request did not include an HTTP(S) URL")
+    selected_url = next((url for url in urls if ".m3u8" in url.lower()), urls[0])
+    return CurlRequest(url=validate_url(selected_url), headers=headers)
 
 
 def is_timeout_error(error: BaseException) -> bool:

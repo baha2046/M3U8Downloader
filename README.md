@@ -159,6 +159,10 @@ screen.
 
 In Chrome browser, press F12, click the tab to the Network page, enter "m3u8" in the Filter box. 
 Press F5 to refresh the page, if the video in the web page uses an HLS source, you can capture the video stream address there. 
+Right click and select "Copy -> Copy as cURL" to get the full URL with headers.
+
+![Copy](docs/screen2.png)
+
 
 ### Regenerate The Xcode Project
 

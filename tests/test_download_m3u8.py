@@ -57,6 +57,63 @@ class DownloadM3u8Tests(unittest.TestCase):
         self.assertIsNone(download_m3u8.format_headers(None))
         self.assertIsNone(download_m3u8.format_headers([]))
 
+    def test_parse_curl_request_extracts_m3u8_url_headers_and_cookie(self):
+        curl_request = """curl 'https://cdn.example.com/path/master.m3u8?token=abc' \\
+  -H 'Accept: */*' \\
+  -H 'Referer: https://watch.example.com/video' \\
+  -b 'session=abc; quality=hd' \\
+  --compressed"""
+
+        parsed = download_m3u8.parse_curl_request(curl_request)
+
+        self.assertEqual(
+            parsed.url,
+            "https://cdn.example.com/path/master.m3u8?token=abc",
+        )
+        self.assertEqual(
+            parsed.headers,
+            [
+                "Accept: */*",
+                "Referer: https://watch.example.com/video",
+                "Cookie: session=abc; quality=hd",
+            ],
+        )
+
+    def test_parse_curl_request_supports_url_header_and_short_user_agent_options(self):
+        curl_request = (
+            "curl --url 'https://cdn.example.com/video.m3u8' "
+            "--header 'Origin: https://watch.example.com' "
+            "--user-agent 'Test Browser' "
+            "--referer 'https://watch.example.com/page'"
+        )
+
+        parsed = download_m3u8.parse_curl_request(curl_request)
+
+        self.assertEqual(parsed.url, "https://cdn.example.com/video.m3u8")
+        self.assertEqual(
+            parsed.headers,
+            [
+                "Origin: https://watch.example.com",
+                "User-Agent: Test Browser",
+                "Referer: https://watch.example.com/page",
+            ],
+        )
+
+    def test_parse_curl_request_prefers_m3u8_url_over_other_http_arguments(self):
+        curl_request = (
+            "curl 'https://watch.example.com/page' "
+            "--connect-to 'cdn.example.com:443:edge.example.com:443' "
+            "'https://cdn.example.com/live/playlist.m3u8'"
+        )
+
+        parsed = download_m3u8.parse_curl_request(curl_request)
+
+        self.assertEqual(parsed.url, "https://cdn.example.com/live/playlist.m3u8")
+
+    def test_parse_curl_request_rejects_non_curl_input(self):
+        with self.assertRaisesRegex(ValueError, "must start with curl"):
+            download_m3u8.parse_curl_request("https://example.com/video.m3u8")
+
     def test_validate_url_rejects_non_http_urls(self):
         with self.assertRaisesRegex(ValueError, "URL must start with http:// or https://"):
             download_m3u8.validate_url("file:///tmp/video.m3u8")

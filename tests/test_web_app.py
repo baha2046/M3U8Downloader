@@ -62,6 +62,64 @@ class WebAppTests(unittest.TestCase):
             ),
         )
 
+    def test_parse_curl_api_returns_url_and_headers(self):
+        response = self.client.post(
+            "/api/curl",
+            json={
+                "curl": (
+                    "curl 'https://cdn.example.com/video.m3u8' "
+                    "-H 'Referer: https://watch.example.com' "
+                    "-b 'session=abc'"
+                )
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["url"], "https://cdn.example.com/video.m3u8")
+        self.assertEqual(
+            data["headers"],
+            [
+                "Referer: https://watch.example.com",
+                "Cookie: session=abc",
+            ],
+        )
+
+    def test_enqueue_can_use_curl_request_when_url_field_is_blank(self):
+        response = self.client.post(
+            "/api/downloads",
+            json={
+                "curl": (
+                    "curl 'https://cdn.example.com/video.m3u8' "
+                    "-H 'Origin: https://watch.example.com'"
+                )
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        data = response.get_json()
+        self.assertEqual(data["url"], "https://cdn.example.com/video.m3u8")
+        self.assertEqual(data["headers"], ["Origin: https://watch.example.com"])
+
+    def test_enqueue_manual_url_and_headers_override_curl_values(self):
+        response = self.client.post(
+            "/api/downloads",
+            json={
+                "url": "https://manual.example.com/video.m3u8",
+                "headers": "Referer: https://manual.example.com",
+                "curl": (
+                    "curl 'https://cdn.example.com/video.m3u8' "
+                    "-H 'Referer: https://watch.example.com' "
+                    "-b 'session=abc'"
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        data = response.get_json()
+        self.assertEqual(data["url"], "https://manual.example.com/video.m3u8")
+        self.assertEqual(data["headers"], ["Referer: https://manual.example.com"])
+
     def test_build_command_maps_form_values_to_cli_arguments(self):
         job = self.service.enqueue(
             {

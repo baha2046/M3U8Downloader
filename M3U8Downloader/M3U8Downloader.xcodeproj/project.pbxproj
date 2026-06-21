@@ -10,6 +10,7 @@
 		00BED59B6F2066051781A9BC /* DownloadJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD7C889A09844E7B3D22A29 /* DownloadJob.swift */; };
 		15AD35508D24DC278262727F /* M3U8DownloaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11A1B0F79DB62E237E83300 /* M3U8DownloaderApp.swift */; };
 		1EF342E52B3126903BFE9D5A /* PanelHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD9E37B6D4E5B0AAEC84C0D /* PanelHelpers.swift */; };
+		7F3C1D2A5B6E4C8D9A0B1234 /* CurlRequestParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F3C1D2A5B6E4C8D9A0B1235 /* CurlRequestParser.swift */; };
 		99F5C32F13D92C9A18ACD86F /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49D1E66C888B73A3981E56C6 /* DownloadManager.swift */; };
 		BE2F617CD89177DD7CCDF94D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 034698BD943DC276D0636C97 /* ContentView.swift */; };
 		D1D4BF372F42BE28722E42DA /* HLSDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1BA03BAEDCA1B891ECA629C /* HLSDownloader.swift */; };
@@ -22,6 +23,7 @@
 		49D1E66C888B73A3981E56C6 /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
 		4AD25653610ABFCE2D1838B0 /* Entitlements.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Entitlements.entitlements; sourceTree = "<group>"; };
 		4CD7C889A09844E7B3D22A29 /* DownloadJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadJob.swift; sourceTree = "<group>"; };
+		7F3C1D2A5B6E4C8D9A0B1235 /* CurlRequestParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurlRequestParser.swift; sourceTree = "<group>"; };
 		90C111E6428F483750DBBBB2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A351A4F19D8DA7D00F245335 /* M3U8Downloader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = M3U8Downloader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D11A1B0F79DB62E237E83300 /* M3U8DownloaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = M3U8DownloaderApp.swift; sourceTree = "<group>"; };
@@ -54,6 +56,7 @@
 		7B9ABE0622460A7E57865666 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				7F3C1D2A5B6E4C8D9A0B1235 /* CurlRequestParser.swift */,
 				49D1E66C888B73A3981E56C6 /* DownloadManager.swift */,
 				E1BA03BAEDCA1B891ECA629C /* HLSDownloader.swift */,
 			);
@@ -165,6 +168,7 @@
 			files = (
 				BE2F617CD89177DD7CCDF94D /* ContentView.swift in Sources */,
 				00BED59B6F2066051781A9BC /* DownloadJob.swift in Sources */,
+				7F3C1D2A5B6E4C8D9A0B1234 /* CurlRequestParser.swift in Sources */,
 				99F5C32F13D92C9A18ACD86F /* DownloadManager.swift in Sources */,
 				D1D4BF372F42BE28722E42DA /* HLSDownloader.swift in Sources */,
 				15AD35508D24DC278262727F /* M3U8DownloaderApp.swift in Sources */,

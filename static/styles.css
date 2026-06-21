@@ -156,6 +156,19 @@ textarea:focus {
   gap: 14px;
 }
 
+.extract-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: -6px;
+}
+
+.extract-row span {
+  min-height: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 button,
 .download-link {
   border: 0;
@@ -385,7 +398,8 @@ button:hover,
   .title-row,
   .job-header,
   .file-row,
-  .action-row {
+  .action-row,
+  .extract-row {
     align-items: stretch;
     grid-template-columns: 1fr;
     flex-direction: column;

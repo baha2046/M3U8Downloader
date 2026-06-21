@@ -215,6 +215,7 @@ struct DownloadCreatorView: View {
     @Binding var selection: ContentView.NavigationSelection
     
     @State private var url: String = ""
+    @State private var curlRequest: String = ""
     @AppStorage("lastSourceType") private var sourceType: String = "url"
     @State private var outputFilename: String = ""
     @AppStorage("lastOutputDir") private var outputDir: String = ""
@@ -263,6 +264,37 @@ struct DownloadCreatorView: View {
                 
                 // Form Card
                 VStack(alignment: .leading, spacing: 16) {
+                    // cURL Import
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Chrome Copy as cURL")
+                            .font(.headline)
+                        TextEditor(text: $curlRequest)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(height: 84)
+                            .padding(4)
+                            .background(Color(NSColor.controlBackgroundColor))
+                            .cornerRadius(6)
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
+                        HStack {
+                            Button("Extract URL & Headers") {
+                                importCurlRequest(curlRequest)
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Button("Paste cURL") {
+                                if let pasteboardString = NSPasteboard.general.string(forType: .string) {
+                                    curlRequest = pasteboardString
+                                    importCurlRequest(pasteboardString)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Spacer()
+                        }
+                    }
+                    
+                    Divider()
+                    
                     // Source Type Picker
                     Picker("Source Type", selection: $sourceType) {
                         Text("Remote URL").tag("url")
@@ -283,7 +315,13 @@ struct DownloadCreatorView: View {
                                 
                                 Button("Paste") {
                                     if let pasteboardString = NSPasteboard.general.string(forType: .string) {
-                                        url = pasteboardString.trimmingCharacters(in: .whitespacesAndNewlines)
+                                        let trimmed = pasteboardString.trimmingCharacters(in: .whitespacesAndNewlines)
+                                        if trimmed.lowercased().hasPrefix("curl ") || trimmed.lowercased() == "curl" {
+                                            curlRequest = pasteboardString
+                                            importCurlRequest(pasteboardString)
+                                        } else {
+                                            url = trimmed
+                                        }
                                     }
                                 }
                                 .buttonStyle(.bordered)
@@ -458,6 +496,26 @@ struct DownloadCreatorView: View {
             if outputDir.isEmpty {
                 outputDir = downloadManager.defaultDownloadDir
             }
+        }
+    }
+    
+    private func importCurlRequest(_ request: String) {
+        do {
+            let parsed = try CurlRequestParser.parse(request)
+            sourceType = "url"
+            url = parsed.url
+            headers = parsed.headers.joined(separator: "\n")
+            showAdvanced = true
+            errorMessage = nil
+            if outputFilename.isEmpty,
+               let parsedUrl = URL(string: parsed.url) {
+                let name = parsedUrl.deletingPathExtension().lastPathComponent
+                if !name.isEmpty {
+                    outputFilename = name
+                }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
     

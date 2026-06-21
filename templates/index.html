@@ -19,6 +19,15 @@
 
       <form id="download-form" class="download-form" enctype="multipart/form-data">
         <label>
+          <span>Chrome Copy as cURL</span>
+          <textarea id="curl-request" name="curl_request" rows="5" placeholder="Paste a copied curl command to extract the m3u8 URL, headers, and cookies"></textarea>
+        </label>
+        <div class="extract-row">
+          <button id="extract-curl-button" type="button" class="secondary-button">Extract from cURL</button>
+          <span id="curl-message" role="status"></span>
+        </div>
+
+        <label>
           <span>m3u8 URL</span>
           <input id="url" name="url" type="url" placeholder="https://example.com/video.m3u8">
         </label>

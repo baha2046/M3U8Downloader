@@ -71,6 +71,15 @@ def parse_headers(value: Any) -> list[str]:
     return [line.strip() for line in str(value).splitlines() if line.strip()]
 
 
+def curl_request_from_payload(payload: dict[str, Any]) -> str:
+    return str(
+        payload.get("curl")
+        or payload.get("curl_request")
+        or payload.get("curlRequest")
+        or ""
+    ).strip()
+
+
 def request_payload() -> dict[str, Any]:
     if request.is_json:
         payload = request.get_json(silent=True)
@@ -284,10 +293,21 @@ class DownloadService:
 
     def enqueue(self, payload: dict[str, Any], playlist_file: Any = None) -> DownloadJob:
         url = str(payload.get("url", "")).strip()
+        headers = parse_headers(payload.get("headers"))
+        parsed_curl: download_m3u8.CurlRequest | None = None
+        curl_request = curl_request_from_payload(payload)
+        has_playlist_upload = bool(playlist_file and getattr(playlist_file, "filename", ""))
+        if curl_request and (not url or not headers) and not (has_playlist_upload and not url):
+            parsed_curl = download_m3u8.parse_curl_request(curl_request)
+            if not url:
+                url = parsed_curl.url
+            if not headers:
+                headers = parsed_curl.headers
+
         source_type = "url"
         if url:
             download_m3u8.validate_url(url)
-        elif playlist_file and getattr(playlist_file, "filename", ""):
+        elif has_playlist_upload:
             url = self.save_uploaded_playlist(playlist_file)
             download_m3u8.validate_source(url)
             source_type = "upload"
@@ -311,7 +331,7 @@ class DownloadService:
             source_type=source_type,
             output=output,
             output_path=output_path,
-            headers=parse_headers(payload.get("headers")),
+            headers=headers,
             quality=quality,
             overwrite=parse_bool(payload.get("overwrite"), default=True),
             segment_workers=parse_positive_int(
@@ -450,6 +470,16 @@ def create_app(service: DownloadService | None = None) -> Flask:
         except ValueError as error:
             return jsonify({"error": str(error)}), 400
         return jsonify(job.to_dict()), 201
+
+    @app.post("/api/curl")
+    def parse_curl():
+        try:
+            parsed = download_m3u8.parse_curl_request(
+                curl_request_from_payload(request_payload())
+            )
+        except ValueError as error:
+            return jsonify({"error": str(error)}), 400
+        return jsonify({"url": parsed.url, "headers": parsed.headers})
 
     @app.get("/api/downloads/<job_id>/events")
     def download_events(job_id: str):
