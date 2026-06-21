@@ -66,7 +66,7 @@ The app auto-detects common `ffmpeg` locations:
 
 You can override the path in the app Preferences screen.
 
-### Build The App
+### Build The App From Source
 
 The Xcode project is checked in at:
 
@@ -74,19 +74,22 @@ The Xcode project is checked in at:
 M3U8Downloader/M3U8Downloader.xcodeproj
 ```
 
-Build from the terminal:
+Build a Release app from the terminal:
 
 ```bash
-cd M3U8Downloader
-./build.sh
+./scripts/build-macos-app.sh
 ```
 
-The script builds the `M3U8Downloader` scheme in Debug configuration and moves
-the resulting app bundle to the repository root:
+The script builds the `M3U8Downloader` scheme from source and leaves Xcode build
+products under `.build/macos/`:
 
 ```text
-M3U8Downloader.app
+.build/macos/DerivedData/Build/Products/Release/M3U8Downloader.app
 ```
+
+Generated app bundles and build output are intentionally ignored by Git. The
+repository should contain source, project files, scripts, docs, and tests rather
+than checked-in `.app` bundles or local Xcode build directories.
 
 You can also open the project in Xcode:
 
@@ -96,12 +99,47 @@ open M3U8Downloader/M3U8Downloader.xcodeproj
 
 Then select the `M3U8Downloader` scheme and run it.
 
-### Run The App
+### Package A macOS Release
 
-After building, launch the app from the repository root:
+Create a clean distributable zip:
 
 ```bash
-open ./M3U8Downloader.app
+./scripts/package-macos-release.sh
+```
+
+The artifact is written to `dist/` using the current Git version, for example:
+
+```text
+dist/M3U8Downloader-<version>-macOS.zip
+```
+
+To produce a DMG instead:
+
+```bash
+./scripts/package-macos-release.sh --format dmg
+```
+
+Set `VERSION` to override the artifact name:
+
+```bash
+VERSION=1.0.0 ./scripts/package-macos-release.sh --format zip
+```
+
+For Developer ID distribution, sign the staged app before packaging by providing
+a signing identity:
+
+```bash
+CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+  VERSION=1.0.0 \
+  ./scripts/package-macos-release.sh --format dmg
+```
+
+### Run The App
+
+After building, launch the app from the build output:
+
+```bash
+open ./.build/macos/DerivedData/Build/Products/Release/M3U8Downloader.app
 ```
 
 To download a stream:

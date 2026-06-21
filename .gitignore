@@ -13,6 +13,8 @@ htmlcov/
 
 M3U8Downloader.app/
 M3U8Downloader/build/
+.build/
+dist/
 DerivedData/
 xcuserdata/
 *.xcuserstate
