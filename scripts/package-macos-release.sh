@@ -7,8 +7,10 @@ Usage: scripts/package-macos-release.sh [--format zip|dmg] [--configuration Rele
 
 Environment:
   VERSION              Version string used in the artifact name. Defaults to git describe output.
-  CODESIGN_IDENTITY    Optional signing identity for the staged app bundle.
+  CODESIGN_IDENTITY    Signing identity for the staged app bundle. Defaults to the
+                       first valid Developer ID Application identity in the keychain.
                        Example: CODESIGN_IDENTITY="Developer ID Application: Example (TEAMID)"
+  SKIP_CODESIGN        Set to 1 to create an unsigned local package.
 USAGE
 }
 
@@ -18,6 +20,15 @@ BUILD_SCRIPT="$ROOT_DIR/scripts/build-macos-app.sh"
 FORMAT="zip"
 CONFIGURATION="${CONFIGURATION:-Release}"
 APP_NAME="${APP_NAME:-M3U8Downloader.app}"
+
+find_developer_id_application_identity() {
+  if ! command -v security >/dev/null 2>&1; then
+    return 1
+  fi
+
+  security find-identity -v -p codesigning 2>/dev/null \
+    | awk -F '"' '/"Developer ID Application:/ { print $2; exit }'
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -82,10 +93,22 @@ fi
 
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR" "$DIST_DIR"
-ditto "$BUILT_APP" "$STAGED_APP"
+ditto --norsrc --noextattr --noqtn "$BUILT_APP" "$STAGED_APP"
+xattr -cr "$STAGED_APP"
 
-if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
-  codesign --force --deep --sign "$CODESIGN_IDENTITY" "$STAGED_APP"
+if [[ "${SKIP_CODESIGN:-0}" != "1" ]]; then
+  if [[ -z "${CODESIGN_IDENTITY:-}" ]]; then
+    CODESIGN_IDENTITY="$(find_developer_id_application_identity || true)"
+  fi
+
+  if [[ -z "$CODESIGN_IDENTITY" ]]; then
+    echo "error: no Developer ID Application signing identity was found." >&2
+    echo "Set CODESIGN_IDENTITY or SKIP_CODESIGN=1 for an unsigned local package." >&2
+    exit 1
+  fi
+
+  codesign --force --deep --timestamp --options runtime --sign "$CODESIGN_IDENTITY" "$STAGED_APP"
+  codesign --verify --deep --strict --verbose=2 "$STAGED_APP"
 fi
 
 case "$FORMAT" in
@@ -94,7 +117,7 @@ case "$FORMAT" in
     rm -f "$ARTIFACT_PATH"
     (
       cd "$STAGING_DIR"
-      ditto -c -k --sequesterRsrc --keepParent "$APP_NAME" "$ARTIFACT_PATH"
+      ditto -c -k --norsrc --noextattr --noqtn --keepParent "$APP_NAME" "$ARTIFACT_PATH"
     )
     ;;
   dmg)

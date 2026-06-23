@@ -125,14 +125,17 @@ Set `VERSION` to override the artifact name:
 VERSION=1.0.0 ./scripts/package-macos-release.sh --format zip
 ```
 
-For Developer ID distribution, sign the staged app before packaging by providing
-a signing identity:
+Release packages are signed with the first valid Developer ID Application
+identity found in your keychain. You can provide an explicit identity when
+needed:
 
 ```bash
 CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
   VERSION=1.0.0 \
   ./scripts/package-macos-release.sh --format dmg
 ```
+
+For an unsigned local package, set `SKIP_CODESIGN=1`.
 
 ### Run The App
 
