@@ -94,6 +94,41 @@ open M3U8Downloader/M3U8Downloader.xcodeproj
 
 然后选择 `M3U8Downloader` scheme 并运行。
 
+### 打包 macOS 发布版本
+
+首次发布前，请将 Apple 公证凭据存储到 Keychain。例如，创建名为
+`develop` 的配置：
+
+```bash
+xcrun notarytool store-credentials develop
+```
+
+创建已签名并经过公证的 DMG：
+
+```bash
+NOTARYTOOL_PROFILE=develop ./scripts/package-macos-release.sh
+```
+
+构建产物会使用当前 Git 版本写入 `dist/`：
+
+```text
+dist/M3U8Downloader-<version>-macOS.dmg
+```
+
+DMG 中包含 `M3U8Downloader.app` 和 `Applications` 链接，用户可将应用拖到
+Applications 上完成安装。
+
+如需创建 ZIP，请显式指定格式：
+
+```bash
+NOTARYTOOL_PROFILE=develop \
+  ./scripts/package-macos-release.sh --format zip
+```
+
+可通过 `VERSION=1.0.0` 覆盖构建产物的版本名称。若要创建不提交给 Apple
+的已签名本地包，请设置 `SKIP_NOTARIZATION=1`；若要创建未签名包，请设置
+`SKIP_CODESIGN=1`。
+
 ### 运行应用
 
 构建完成后，从仓库根目录启动应用：

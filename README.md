@@ -108,7 +108,7 @@ in Keychain under a profile name. For example, create the `develop` profile:
 xcrun notarytool store-credentials develop
 ```
 
-Create a signed and notarized distributable zip with that profile:
+Create a signed and notarized distributable DMG with that profile:
 
 ```bash
 NOTARYTOOL_PROFILE=develop ./scripts/package-macos-release.sh
@@ -117,13 +117,16 @@ NOTARYTOOL_PROFILE=develop ./scripts/package-macos-release.sh
 The artifact is written to `dist/` using the current Git version, for example:
 
 ```text
-dist/M3U8Downloader-<version>-macOS.zip
+dist/M3U8Downloader-<version>-macOS.dmg
 ```
 
-To produce a DMG instead:
+The mounted DMG contains `M3U8Downloader.app` and an `Applications` link, so
+users can install the app by dragging it onto Applications.
+
+To produce a ZIP instead:
 
 ```bash
-NOTARYTOOL_PROFILE=develop ./scripts/package-macos-release.sh --format dmg
+NOTARYTOOL_PROFILE=develop ./scripts/package-macos-release.sh --format zip
 ```
 
 Set `VERSION` to override the artifact name:
@@ -131,7 +134,7 @@ Set `VERSION` to override the artifact name:
 ```bash
 NOTARYTOOL_PROFILE=develop \
   VERSION=1.0.0 \
-  ./scripts/package-macos-release.sh --format zip
+  ./scripts/package-macos-release.sh
 ```
 
 Release packages are signed with the first valid Developer ID Application
@@ -142,7 +145,7 @@ needed:
 CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
   NOTARYTOOL_PROFILE=develop \
   VERSION=1.0.0 \
-  ./scripts/package-macos-release.sh --format dmg
+  ./scripts/package-macos-release.sh
 ```
 
 The packaging script submits the ZIP or DMG with `notarytool --wait`. After

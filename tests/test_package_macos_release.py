@@ -13,6 +13,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 class PackageMacOSReleaseTests(unittest.TestCase):
     def test_signed_zip_is_notarized_and_rebuilt_after_stapling(self):
         run = self._run_package(
+            arguments=["--format", "zip"],
             environment={"NOTARYTOOL_PROFILE": "develop"},
         )
 
@@ -34,6 +35,20 @@ class PackageMacOSReleaseTests(unittest.TestCase):
         )
         self.assertIn("stapler validate", run["xcrun"])
         self.assertEqual(run["ditto"].count("-c -k"), 2)
+        self.assertEqual(run["hdiutil"], "")
+
+    def test_default_package_is_dmg_with_applications_link(self):
+        run = self._run_package(
+            environment={"NOTARYTOOL_PROFILE": "develop"},
+        )
+
+        artifact = str(
+            ROOT_DIR / "dist/M3U8Downloader-v9.9.9-macOS.dmg"
+        )
+        self.assertEqual(run["result"].returncode, 0, run["result"].stderr)
+        self.assertIn(f"notarytool submit {artifact}", run["xcrun"])
+        self.assertIn(f"stapler staple {artifact}", run["xcrun"])
+        self.assertIn("applications=/Applications", run["hdiutil"])
 
     def test_package_auto_signs_with_developer_id_application_identity(self):
         run = self._run_package(
@@ -69,6 +84,7 @@ class PackageMacOSReleaseTests(unittest.TestCase):
 
     def test_notarization_failure_stops_before_stapling_or_success(self):
         run = self._run_package(
+            arguments=["--format", "zip"],
             environment={"NOTARYTOOL_PROFILE": "develop"},
             notary_failure=True,
         )
@@ -213,6 +229,21 @@ class PackageMacOSReleaseTests(unittest.TestCase):
                 set -euo pipefail
                 printf '%s\n' "$*" >> "$HDIUTIL_LOG"
                 artifact="${@: -1}"
+                source_folder=
+                while [[ $# -gt 0 ]]; do
+                  case "$1" in
+                    -srcfolder)
+                      source_folder="$2"
+                      shift 2
+                      ;;
+                    *)
+                      shift
+                      ;;
+                  esac
+                done
+                printf 'applications=%s\n' \
+                  "$(readlink "$source_folder/Applications" 2>/dev/null || true)" \
+                  >> "$HDIUTIL_LOG"
                 mkdir -p "$(dirname "$artifact")"
                 printf 'disk image' > "$artifact"
                 """,

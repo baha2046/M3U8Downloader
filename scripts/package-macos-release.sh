@@ -5,6 +5,8 @@ usage() {
   cat <<'USAGE'
 Usage: scripts/package-macos-release.sh [--format zip|dmg] [--configuration Release]
 
+The default artifact format is dmg.
+
 Environment:
   VERSION              Version string used in the artifact name. Defaults to git describe output.
   CODESIGN_IDENTITY    Signing identity for the staged app bundle. Defaults to the
@@ -19,7 +21,7 @@ USAGE
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_SCRIPT="$ROOT_DIR/scripts/build-macos-app.sh"
 
-FORMAT="zip"
+FORMAT="dmg"
 CONFIGURATION="${CONFIGURATION:-Release}"
 APP_NAME="${APP_NAME:-M3U8Downloader.app}"
 
@@ -43,6 +45,7 @@ create_artifact() {
       ;;
     dmg)
       rm -f "$ARTIFACT_PATH"
+      ln -sfn /Applications "$STAGING_DIR/Applications"
       hdiutil create \
         -volname "M3U8Downloader" \
         -srcfolder "$STAGING_DIR" \

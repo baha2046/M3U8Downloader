@@ -96,6 +96,41 @@ open M3U8Downloader/M3U8Downloader.xcodeproj
 
 その後、`M3U8Downloader` scheme を選択して実行します。
 
+### macOS リリースのパッケージ化
+
+最初に、Apple の公証用認証情報を Keychain に保存します。たとえば、
+`develop` というプロファイルを作成します。
+
+```bash
+xcrun notarytool store-credentials develop
+```
+
+署名および公証済みの DMG を作成します。
+
+```bash
+NOTARYTOOL_PROFILE=develop ./scripts/package-macos-release.sh
+```
+
+成果物は現在の Git バージョンを使用して `dist/` に作成されます。
+
+```text
+dist/M3U8Downloader-<version>-macOS.dmg
+```
+
+DMG には `M3U8Downloader.app` と `Applications` リンクが含まれます。
+アプリを Applications にドラッグしてインストールできます。
+
+ZIP を作成する場合は、形式を明示します。
+
+```bash
+NOTARYTOOL_PROFILE=develop \
+  ./scripts/package-macos-release.sh --format zip
+```
+
+`VERSION=1.0.0` を設定すると成果物のバージョン名を上書きできます。
+Apple に送信しない署名済みローカルパッケージには
+`SKIP_NOTARIZATION=1`、未署名パッケージには `SKIP_CODESIGN=1` を使用します。
+
 ### アプリの実行
 
 ビルド後、リポジトリルートからアプリを起動します。
