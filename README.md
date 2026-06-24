@@ -101,10 +101,17 @@ Then select the `M3U8Downloader` scheme and run it.
 
 ### Package A macOS Release
 
-Create a clean distributable zip:
+Before the first notarized release, store your Apple notarization credentials
+in Keychain under a profile name. For example, create the `develop` profile:
 
 ```bash
-./scripts/package-macos-release.sh
+xcrun notarytool store-credentials develop
+```
+
+Create a signed and notarized distributable zip with that profile:
+
+```bash
+NOTARYTOOL_PROFILE=develop ./scripts/package-macos-release.sh
 ```
 
 The artifact is written to `dist/` using the current Git version, for example:
@@ -116,13 +123,15 @@ dist/M3U8Downloader-<version>-macOS.zip
 To produce a DMG instead:
 
 ```bash
-./scripts/package-macos-release.sh --format dmg
+NOTARYTOOL_PROFILE=develop ./scripts/package-macos-release.sh --format dmg
 ```
 
 Set `VERSION` to override the artifact name:
 
 ```bash
-VERSION=1.0.0 ./scripts/package-macos-release.sh --format zip
+NOTARYTOOL_PROFILE=develop \
+  VERSION=1.0.0 \
+  ./scripts/package-macos-release.sh --format zip
 ```
 
 Release packages are signed with the first valid Developer ID Application
@@ -131,11 +140,19 @@ needed:
 
 ```bash
 CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+  NOTARYTOOL_PROFILE=develop \
   VERSION=1.0.0 \
   ./scripts/package-macos-release.sh --format dmg
 ```
 
-For an unsigned local package, set `SKIP_CODESIGN=1`.
+The packaging script submits the ZIP or DMG with `notarytool --wait`. After
+Apple accepts it, the script staples and validates the ticket. ZIP artifacts
+are rebuilt from the stapled app before the final artifact path is printed.
+Any submission, stapling, or validation failure stops the release.
+
+For a signed local package that should not be submitted to Apple, set
+`SKIP_NOTARIZATION=1`. For an unsigned local package, set `SKIP_CODESIGN=1`;
+unsigned packages also skip notarization.
 
 ### Run The App
 

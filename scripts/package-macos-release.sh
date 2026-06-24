@@ -10,7 +10,9 @@ Environment:
   CODESIGN_IDENTITY    Signing identity for the staged app bundle. Defaults to the
                        first valid Developer ID Application identity in the keychain.
                        Example: CODESIGN_IDENTITY="Developer ID Application: Example (TEAMID)"
+  NOTARYTOOL_PROFILE   Keychain profile created by `xcrun notarytool store-credentials`.
   SKIP_CODESIGN        Set to 1 to create an unsigned local package.
+  SKIP_NOTARIZATION    Set to 1 for a signed local package without notarization.
 USAGE
 }
 
@@ -28,6 +30,37 @@ find_developer_id_application_identity() {
 
   security find-identity -v -p codesigning 2>/dev/null \
     | awk -F '"' '/"Developer ID Application:/ { print $2; exit }'
+}
+
+create_artifact() {
+  case "$FORMAT" in
+    zip)
+      rm -f "$ARTIFACT_PATH"
+      (
+        cd "$STAGING_DIR"
+        ditto -c -k --norsrc --noextattr --noqtn --keepParent "$APP_NAME" "$ARTIFACT_PATH"
+      )
+      ;;
+    dmg)
+      rm -f "$ARTIFACT_PATH"
+      hdiutil create \
+        -volname "M3U8Downloader" \
+        -srcfolder "$STAGING_DIR" \
+        -ov \
+        -format UDZO \
+        "$ARTIFACT_PATH"
+      ;;
+  esac
+}
+
+submit_for_notarization() {
+  if ! xcrun notarytool submit \
+    "$ARTIFACT_PATH" \
+    --keychain-profile "$NOTARYTOOL_PROFILE" \
+    --wait; then
+    echo "error: Apple notarization failed for $ARTIFACT_PATH" >&2
+    exit 1
+  fi
 }
 
 while [[ $# -gt 0 ]]; do
@@ -109,27 +142,47 @@ if [[ "${SKIP_CODESIGN:-0}" != "1" ]]; then
 
   codesign --force --deep --timestamp --options runtime --sign "$CODESIGN_IDENTITY" "$STAGED_APP"
   codesign --verify --deep --strict --verbose=2 "$STAGED_APP"
+
+  if [[ "${SKIP_NOTARIZATION:-0}" != "1" && -z "${NOTARYTOOL_PROFILE:-}" ]]; then
+    echo "error: NOTARYTOOL_PROFILE is required for a notarized release." >&2
+    echo "Create one with 'xcrun notarytool store-credentials' or set SKIP_NOTARIZATION=1." >&2
+    exit 1
+  fi
 fi
 
 case "$FORMAT" in
   zip)
     ARTIFACT_PATH="$DIST_DIR/$ARTIFACT_BASENAME.zip"
-    rm -f "$ARTIFACT_PATH"
-    (
-      cd "$STAGING_DIR"
-      ditto -c -k --norsrc --noextattr --noqtn --keepParent "$APP_NAME" "$ARTIFACT_PATH"
-    )
     ;;
   dmg)
     ARTIFACT_PATH="$DIST_DIR/$ARTIFACT_BASENAME.dmg"
-    rm -f "$ARTIFACT_PATH"
-    hdiutil create \
-      -volname "M3U8Downloader" \
-      -srcfolder "$STAGING_DIR" \
-      -ov \
-      -format UDZO \
-      "$ARTIFACT_PATH"
     ;;
 esac
+
+create_artifact
+
+if [[ "${SKIP_CODESIGN:-0}" != "1" && "${SKIP_NOTARIZATION:-0}" != "1" ]]; then
+  submit_for_notarization
+
+  if [[ "$FORMAT" == "zip" ]]; then
+    STAPLE_TARGET="$STAGED_APP"
+  else
+    STAPLE_TARGET="$ARTIFACT_PATH"
+  fi
+
+  if ! xcrun stapler staple "$STAPLE_TARGET"; then
+    echo "error: failed to staple notarization ticket to $STAPLE_TARGET" >&2
+    exit 1
+  fi
+
+  if ! xcrun stapler validate "$STAPLE_TARGET"; then
+    echo "error: failed to validate notarization ticket on $STAPLE_TARGET" >&2
+    exit 1
+  fi
+
+  if [[ "$FORMAT" == "zip" ]]; then
+    create_artifact
+  fi
+fi
 
 echo "Release artifact: $ARTIFACT_PATH"
