@@ -46,6 +46,9 @@ temporary staging state changes so the test can assert the symlink target.
 
 ## Documentation
 
-The README release section will describe DMG as the default artifact and show
-that it contains the drag-to-Applications link. ZIP instructions will use an
-explicit `--format zip` command.
+The release sections in `README.md`, `README.ja.md`, and `README.zh-CN.md` will
+describe DMG as the default artifact and show that it contains the
+drag-to-Applications link. ZIP instructions will use an explicit
+`--format zip` command. The Japanese and Simplified Chinese READMEs will gain
+localized packaging sections because they do not currently document the
+release script.
